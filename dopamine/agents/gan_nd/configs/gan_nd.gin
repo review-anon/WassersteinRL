@@ -1,0 +1,68 @@
+import numpy
+import dopamine.agents.gan_nd.gan_nd_agent
+import dopamine.agents.dqn.dqn_agent
+import dopamine.discrete_domains.atari_lib
+import dopamine.discrete_domains.run_experiment
+import dopamine.replay_memory.prioritized_replay_buffer
+import dopamine.environment.maze
+# import particle_net
+import gin.tf.external_configurables
+
+
+gan_nd_agent.GANAgent.gamma = 0.99
+gan_nd_agent.GANAgent.num_atoms = 200 #300 #200
+gan_nd_agent.GANAgent.bandwidth_selection_type = 'mixture' #[med/annealing/mixture/const]
+gan_nd_agent.GANAgent.policy = 'eps_greedy'
+gan_nd_agent.GANAgent.target_estimator = 'mean'
+gan_nd_agent.GANAgent.delta = 1.
+gan_nd_agent.GANAgent.kappa = 0
+gan_nd_agent.GANAgent.network = @particle_net.NdParticleDQNet
+gan_nd_agent.GANAgent.update_horizon = 1
+gan_nd_agent.GANAgent.min_replay_history = 50000
+gan_nd_agent.GANAgent.update_period = 4
+gan_nd_agent.GANAgent.target_update_period = 10000
+gan_nd_agent.GANAgent.epsilon_fn = @dopamine.agents.dqn.dqn_agent.linearly_decaying_epsilon
+gan_nd_agent.GANAgent.epsilon_train = 0.01
+gan_nd_agent.GANAgent.epsilon_eval = 0.001
+gan_nd_agent.GANAgent.epsilon_decay_period = 1000000
+gan_nd_agent.GANAgent.tf_device = '/gpu:0'
+gan_nd_agent.GANAgent.replay_scheme = 'uniform'
+gan_nd_agent.GANAgent.debug = True
+gan_nd_agent.GANAgent.network_type='v21'       # 默认 v21
+gan_nd_agent.GANAgent.bandwidth_type='v3'
+gan_nd_agent.GANAgent.kscale_type='v11'
+gan_nd_agent.GANAgent.num_discriminator=5      # 默认 5
+gan_nd_agent.GANAgent.grad_penalty_factor=0.1
+
+
+gan_nd_agent.GANAgent.optimizer_g = @tf.train.AdamOptimizer()
+gan_nd_agent.GANAgent.optimizer_d = @tf.train.AdamOptimizer()
+tf.train.AdamOptimizer.learning_rate = 0.00005    # 0.00025 #0.00005  # 默认
+tf.train.AdamOptimizer.epsilon = 0.0003125        # 0.01 / 32         # 默认
+
+atari_lib.create_atari_environment.game_name = 'Pong'
+# Sticky actions with probability 0.25, as suggested by (Machado et al., 2017).
+atari_lib.create_atari_environment.sticky_actions = True
+
+# some config in original gan repo that is questionable
+# create_atari_environment.sticky_actions = False
+# NoopAtariPreprocessing.terminal_on_life_loss = True
+
+create_agent.agent_name = 'gan_nd'
+Runner.training_steps = 250000
+Runner.evaluation_steps = 125000
+Runner.max_steps_per_episode = 27000  # Default max episode length.
+
+# For policy optimization
+# Runner.num_iterations = 200
+# Runner.clip_rewards = True
+
+# For policy evaluation in Maze
+Runner.clip_rewards = False
+Runner.num_iterations = 20
+create_runner.exp_name = 'Atari'
+gan_nd_agent.GANAgent.maze_env=True
+gan_nd_agent.GANAgent.evaluation_setting=True
+
+WrappedPrioritizedReplayBuffer.replay_capacity = 1000000
+WrappedPrioritizedReplayBuffer.batch_size = 32
